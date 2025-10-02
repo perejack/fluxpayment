@@ -77,13 +77,17 @@ export default function TransactionStatus({
       console.log('Transaction status response:', data) // Debug log
 
       // Check if transaction is still pending (no receipt yet)
-      if (data.TransactionStatus === "Pending" || data.ResultDesc === "Transaction is pending") {
+      if (data.TransactionStatus === "Pending" || 
+          data.ResultDesc === "Transaction is pending" ||
+          (data.ResultCode === "200" && data.TransactionReceipt === "N/A")) {
         // Keep polling - transaction still pending
         return
       }
 
       // Check for success - must have receipt and completed status
-      if (data.TransactionStatus === "Completed" && data.TransactionReceipt && data.TransactionReceipt !== "N/A") {
+      if (data.TransactionStatus === "Completed" && 
+          data.TransactionReceipt && 
+          data.TransactionReceipt !== "N/A") {
         onStatusUpdate({
           ...transaction,
           status: 'success',
@@ -91,15 +95,14 @@ export default function TransactionStatus({
           receipt: data.TransactionReceipt,
           responseCode: parseInt(data.ResultCode || 0),
         })
-      } else if (data.ResultCode || data.TransactionCode) {
-        // Check for cancellation response codes
+      } else if (data.ResultCode && data.ResultCode !== "200") {
+        // Only process non-200 codes (failures/cancellations)
         const resultCode = data.ResultCode || data.TransactionCode
         const resultDesc = data.ResultDesc || data.TransactionStatus || ''
         
         const isCancelled = 
           resultCode === "1032" || resultCode === 1032 ||  // Request cancelled by user
           resultCode === "1031" || resultCode === 1031 ||  // Request cancelled
-          resultCode === "1" || resultCode === 1 ||        // Insufficient funds (sometimes user cancels)
           resultDesc.toLowerCase().includes('cancel') ||
           resultDesc.toLowerCase().includes('cancelled')
 
@@ -110,7 +113,7 @@ export default function TransactionStatus({
             message: resultDesc || 'Payment was cancelled',
             responseCode: parseInt(resultCode),
           })
-        } else if (resultCode !== "200") {
+        } else {
           onStatusUpdate({
             ...transaction,
             status: 'failed',

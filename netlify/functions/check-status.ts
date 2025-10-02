@@ -101,9 +101,9 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        ResultCode: transaction.status === 'success' ? '200' : (transaction.status === 'cancelled' ? '1032' : '1'),
-        ResultDesc: transaction.result_description || transaction.status,
-        TransactionStatus: transaction.status === 'success' ? 'Completed' : transaction.status,
+        ResultCode: transaction.status === 'success' ? '200' : (transaction.status === 'cancelled' ? '1032' : (transaction.status === 'pending' ? '200' : '1')),
+        ResultDesc: transaction.result_description || (transaction.status === 'pending' ? 'Transaction is pending' : transaction.status),
+        TransactionStatus: transaction.status === 'success' ? 'Completed' : (transaction.status === 'pending' ? 'Pending' : transaction.status),
         TransactionReceipt: transaction.receipt_number || 'N/A',
         TransactionAmount: transaction.amount,
         TransactionDate: transaction.transaction_date,
