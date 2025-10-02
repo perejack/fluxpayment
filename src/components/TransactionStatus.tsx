@@ -6,12 +6,14 @@ interface TransactionStatusProps {
   transaction: Transaction
   onReset: () => void
   onStatusUpdate: (transaction: Transaction) => void
+  email: string
 }
 
 export default function TransactionStatus({ 
   transaction, 
   onReset,
-  onStatusUpdate 
+  onStatusUpdate,
+  email
 }: TransactionStatusProps) {
   const [checking, setChecking] = useState(false)
   const [countdown, setCountdown] = useState(60)
@@ -67,7 +69,7 @@ export default function TransactionStatus({
         },
         body: JSON.stringify({
           api_key: 'PSFXyLBOrRV9',
-          email: 'test@example.com', // This should be the email from the original payment
+          email: email, // This should be the email from the original payment form
           transaction_request_id: transaction.transactionId,
         }),
       })
