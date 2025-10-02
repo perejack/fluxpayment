@@ -82,43 +82,42 @@ export default function TransactionStatus({
         return
       }
 
-      // Check for final statuses (success, failed, or cancelled)
-      const resultCode = data.ResultCode || data.TransactionCode
-      const resultDesc = data.ResultDesc || data.TransactionStatus || ''
-
-      // Success - must have completed status AND receipt
+      // Check for success - must have receipt and completed status
       if (data.TransactionStatus === "Completed" && data.TransactionReceipt && data.TransactionReceipt !== "N/A") {
         onStatusUpdate({
           ...transaction,
           status: 'success',
           message: 'Payment completed successfully!',
           receipt: data.TransactionReceipt,
-          responseCode: parseInt(resultCode || 0),
+          responseCode: parseInt(data.ResultCode || 0),
         })
-      }
-      // Cancelled - specific cancellation codes
-      else if (resultCode === "1032" || resultCode === "1031" || resultDesc.toLowerCase().includes('cancel')) {
-        onStatusUpdate({
-          ...transaction,
-          status: 'cancelled',
-          message: resultDesc || 'Payment was cancelled',
-          responseCode: parseInt(resultCode || 0),
-        })
-      }
-      // Failed - timeout/unreachable codes (1037, etc.) - keep polling
-      else if (resultCode === "1037" || resultDesc.toLowerCase().includes('timeout') || resultDesc.toLowerCase().includes('unreachable')) {
-        // These are not final failures, keep polling
-        console.log('Timeout/unreachable - continuing to poll')
-        return
-      }
-      // Other failures
-      else if (resultCode && resultCode !== "200") {
-        onStatusUpdate({
-          ...transaction,
-          status: 'failed',
-          message: resultDesc || 'Payment failed',
-          responseCode: parseInt(resultCode || 0),
-        })
+      } else if (data.ResultCode || data.TransactionCode) {
+        // Check for cancellation response codes
+        const resultCode = data.ResultCode || data.TransactionCode
+        const resultDesc = data.ResultDesc || data.TransactionStatus || ''
+        
+        const isCancelled = 
+          resultCode === "1032" || resultCode === 1032 ||  // Request cancelled by user
+          resultCode === "1031" || resultCode === 1031 ||  // Request cancelled
+          resultCode === "1" || resultCode === 1 ||        // Insufficient funds (sometimes user cancels)
+          resultDesc.toLowerCase().includes('cancel') ||
+          resultDesc.toLowerCase().includes('cancelled')
+
+        if (isCancelled) {
+          onStatusUpdate({
+            ...transaction,
+            status: 'cancelled',
+            message: resultDesc || 'Payment was cancelled',
+            responseCode: parseInt(resultCode),
+          })
+        } else if (resultCode !== "200") {
+          onStatusUpdate({
+            ...transaction,
+            status: 'failed',
+            message: resultDesc || 'Payment failed',
+            responseCode: parseInt(resultCode),
+          })
+        }
       }
     } catch (error) {
       console.error('Status check error:', error)

@@ -84,9 +84,21 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     if (ResponseCode === 0) {
       status = 'success'
       statusMessage = 'Payment completed successfully'
-    } else if (ResponseCode === 1032 || ResponseCode === 1031) {
+    } else if (ResponseCode === 1032 || ResponseCode === 1031 || ResponseCode === 1) {
+      // User explicitly cancelled the transaction
       status = 'cancelled'
-      statusMessage = 'Payment was cancelled'
+      statusMessage = 'Payment was cancelled by user'
+    } else if (ResponseCode === 1037) {
+      // Timeout - don't update status, keep as pending
+      console.log('Timeout response received - ignoring webhook, keeping transaction pending')
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ 
+          status: 'received',
+          message: 'Timeout webhook received but ignored - transaction still pending',
+        }),
+      }
     }
 
     // Update transaction in database
