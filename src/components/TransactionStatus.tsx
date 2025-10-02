@@ -67,39 +67,49 @@ export default function TransactionStatus({
         },
         body: JSON.stringify({
           api_key: 'PSFXyLBOrRV9',
-          email: 'your-account@email.com', // Hardcoded email tied to API key
+          email: 'frankyfreaky103@gmail.com', // Email registered with PesaFlux account
           transaction_request_id: transaction.transactionId,
         }),
       })
 
       const data = await response.json()
 
-      if (data.ResultCode === "200" || data.ResultCode === 200) {
+      console.log('Transaction status response:', data) // Debug log
+
+      // Check for success
+      if (data.ResultCode === "200" || data.ResultCode === 200 || data.TransactionStatus === "Completed") {
         onStatusUpdate({
           ...transaction,
           status: 'success',
           message: 'Payment completed successfully!',
           receipt: data.TransactionReceipt,
-          responseCode: parseInt(data.ResultCode),
+          responseCode: parseInt(data.ResultCode || data.TransactionCode || 0),
         })
-      } else if (data.ResultCode && data.ResultCode !== "200") {
-        // Check for cancellation response codes (common ones: 1032, 1031, etc.)
-        const isCancelled = data.ResultCode === "1032" || data.ResultCode === "1031" ||
-                           (data.ResultDesc && data.ResultDesc.toLowerCase().includes('cancel'))
+      } else if (data.ResultCode || data.TransactionCode) {
+        // Check for cancellation response codes
+        const resultCode = data.ResultCode || data.TransactionCode
+        const resultDesc = data.ResultDesc || data.TransactionStatus || ''
+        
+        const isCancelled = 
+          resultCode === "1032" || resultCode === 1032 ||  // Request cancelled by user
+          resultCode === "1031" || resultCode === 1031 ||  // Request cancelled
+          resultCode === "1" || resultCode === 1 ||        // Insufficient funds (sometimes user cancels)
+          resultDesc.toLowerCase().includes('cancel') ||
+          resultDesc.toLowerCase().includes('cancelled')
 
         if (isCancelled) {
           onStatusUpdate({
             ...transaction,
             status: 'cancelled',
-            message: 'Payment was cancelled',
-            responseCode: parseInt(data.ResultCode),
+            message: resultDesc || 'Payment was cancelled',
+            responseCode: parseInt(resultCode),
           })
         } else {
           onStatusUpdate({
             ...transaction,
             status: 'failed',
-            message: data.ResultDesc || 'Payment failed',
-            responseCode: parseInt(data.ResultCode),
+            message: resultDesc || 'Payment failed',
+            responseCode: parseInt(resultCode),
           })
         }
       }
