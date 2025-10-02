@@ -5,7 +5,7 @@ import { Smartphone } from 'lucide-react'
 
 export interface Transaction {
   transactionId: string
-  status: 'pending' | 'success' | 'failed'
+  status: 'pending' | 'success' | 'failed' | 'cancelled'
   message: string
   amount?: number
   phone?: string

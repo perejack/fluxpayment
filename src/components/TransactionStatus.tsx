@@ -83,12 +83,25 @@ export default function TransactionStatus({
           responseCode: parseInt(data.ResultCode),
         })
       } else if (data.ResultCode && data.ResultCode !== "200") {
-        onStatusUpdate({
-          ...transaction,
-          status: 'failed',
-          message: data.ResultDesc || 'Payment failed',
-          responseCode: parseInt(data.ResultCode),
-        })
+        // Check for cancellation response codes (common ones: 1032, 1031, etc.)
+        const isCancelled = data.ResultCode === "1032" || data.ResultCode === "1031" ||
+                           (data.ResultDesc && data.ResultDesc.toLowerCase().includes('cancel'))
+
+        if (isCancelled) {
+          onStatusUpdate({
+            ...transaction,
+            status: 'cancelled',
+            message: 'Payment was cancelled',
+            responseCode: parseInt(data.ResultCode),
+          })
+        } else {
+          onStatusUpdate({
+            ...transaction,
+            status: 'failed',
+            message: data.ResultDesc || 'Payment failed',
+            responseCode: parseInt(data.ResultCode),
+          })
+        }
       }
     } catch (error) {
       console.error('Status check error:', error)
@@ -103,6 +116,8 @@ export default function TransactionStatus({
         return <CheckCircle className="w-16 h-16 text-green-500" />
       case 'failed':
         return <XCircle className="w-16 h-16 text-red-500" />
+      case 'cancelled':
+        return <XCircle className="w-16 h-16 text-orange-500" />
       case 'pending':
         return <Loader2 className="w-16 h-16 text-primary-500 animate-spin" />
     }
@@ -114,6 +129,8 @@ export default function TransactionStatus({
         return 'text-green-400'
       case 'failed':
         return 'text-red-400'
+      case 'cancelled':
+        return 'text-orange-400'
       case 'pending':
         return 'text-primary-400'
     }
@@ -125,6 +142,8 @@ export default function TransactionStatus({
         return 'Payment Successful!'
       case 'failed':
         return 'Payment Failed'
+      case 'cancelled':
+        return 'Payment Cancelled'
       case 'pending':
         return 'Processing Payment'
     }
@@ -194,6 +213,24 @@ export default function TransactionStatus({
         )}
       </div>
 
+      {/* Instructions for cancelled */}
+      {transaction.status === 'cancelled' && (
+        <div className="bg-orange-500/10 border border-orange-500/50 rounded-lg p-4">
+          <p className="text-sm text-orange-300 text-center">
+            Payment was cancelled. You can try again with the same or different details.
+          </p>
+        </div>
+      )}
+
+      {/* Instructions for failed */}
+      {transaction.status === 'failed' && (
+        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4">
+          <p className="text-sm text-red-300 text-center">
+            Payment failed. Please check your M-Pesa balance and try again.
+          </p>
+        </div>
+      )}
+
       {/* Instructions for pending */}
       {transaction.status === 'pending' && (
         <div className="bg-primary-500/10 border border-primary-500/50 rounded-lg p-4">
@@ -229,7 +266,8 @@ export default function TransactionStatus({
           onClick={onReset}
           className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
         >
-          {transaction.status === 'success' ? 'Make Another Payment' : 'Try Again'}
+          {transaction.status === 'success' ? 'Make Another Payment' :
+           transaction.status === 'cancelled' ? 'Try Again' : 'Try Again'}
         </button>
       </div>
     </div>
