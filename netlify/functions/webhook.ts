@@ -1,4 +1,5 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
+import { supabase } from './supabase'
 
 interface WebhookPayload {
   ResponseCode: number
@@ -76,86 +77,61 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       CheckoutRequestID,
     } = payload
 
-    // Process based on response code
+    // Determine status based on response code
+    let status: 'success' | 'failed' | 'cancelled' = 'failed'
+    let statusMessage = ResponseDescription
+
     if (ResponseCode === 0) {
-      // Transaction successful
-      console.log('✓ Transaction Successful')
-      console.log(`  Transaction ID: ${TransactionID}`)
-      console.log(`  Amount: KES ${TransactionAmount}`)
-      console.log(`  Receipt: ${TransactionReceipt}`)
-      console.log(`  Phone: ${Msisdn}`)
-      console.log(`  Reference: ${TransactionReference}`)
-      console.log(`  Date: ${TransactionDate}`)
+      status = 'success'
+      statusMessage = 'Payment completed successfully'
+    } else if (ResponseCode === 1032 || ResponseCode === 1031) {
+      status = 'cancelled'
+      statusMessage = 'Payment was cancelled'
+    }
 
-      // Here you would typically:
-      // 1. Update your database with the successful payment
-      // 2. Send confirmation email/SMS to customer
-      // 3. Trigger any business logic (e.g., activate subscription, deliver product)
-      // 4. Store the transaction receipt for records
+    // Update transaction in database
+    try {
+      const { error: updateError } = await supabase
+        .from('transactions')
+        .update({
+          status: status,
+          result_code: ResponseCode.toString(),
+          result_description: statusMessage,
+          receipt_number: TransactionReceipt,
+          merchant_request_id: MerchantRequestID,
+          checkout_request_id: CheckoutRequestID,
+          transaction_date: TransactionDate,
+          transaction_id: TransactionID,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('merchant_request_id', MerchantRequestID)
 
-      // Example: You could store this in a database or external service
-      // await storeTransaction({
-      //   transactionId: TransactionID,
-      //   amount: TransactionAmount,
-      //   receipt: TransactionReceipt,
-      //   phone: Msisdn,
-      //   reference: TransactionReference,
-      //   status: 'completed',
-      //   timestamp: new Date(TransactionDate),
-      // })
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ 
-          status: 'success',
-          message: 'Webhook processed successfully',
-          transactionId: TransactionID,
-        }),
+      if (updateError) {
+        console.error('Database update error:', updateError)
+        console.log('Transaction updated in database:', TransactionID)
       }
-    } else {
-      // Transaction failed
-      console.log('✗ Transaction Failed')
-      console.log(`  Transaction ID: ${TransactionID}`)
-      console.log(`  Response Code: ${ResponseCode}`)
-      console.log(`  Description: ${ResponseDescription}`)
-      console.log(`  Phone: ${Msisdn}`)
-      console.log(`  Reference: ${TransactionReference}`)
+    } catch (dbErr) {
+      console.error('Database update error:', dbErr)
+    }
 
-      // Here you would typically:
-      // 1. Update your database with the failed payment
-      // 2. Notify customer about the failure
-      // 3. Log the failure reason for analysis
-
-      // Example: Store failed transaction
-      // await storeTransaction({
-      //   transactionId: TransactionID,
-      //   status: 'failed',
-      //   failureReason: ResponseDescription,
-      //   responseCode: ResponseCode,
-      //   phone: Msisdn,
-      //   reference: TransactionReference,
-      // })
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ 
-          status: 'received',
-          message: 'Failed transaction logged',
-          transactionId: TransactionID,
-        }),
-      }
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ 
+        status: 'success',
+        message: 'Webhook processed successfully',
+        transactionId: TransactionID,
+      }),
     }
   } catch (error) {
     console.error('Webhook processing error:', error)
-    
+
     // Still return 200 to acknowledge receipt
     // This prevents PesaFlux from retrying the webhook
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         status: 'error',
         message: 'Webhook received but processing failed',
       }),

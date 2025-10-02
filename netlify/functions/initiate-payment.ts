@@ -1,4 +1,5 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
+import { supabase } from './supabase'
 
 interface PaymentRequest {
   msisdn: string
@@ -157,6 +158,28 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Check if request was successful
     if (data.success === '200' || data.success === 200) {
+      // Store transaction in Supabase
+      try {
+        const { error: dbError } = await supabase
+          .from('transactions')
+          .insert({
+            transaction_request_id: data.transaction_request_id,
+            status: 'pending',
+            amount: amount,
+            phone: msisdn,
+            email: email,
+            reference: reference,
+          })
+
+        if (dbError) {
+          console.error('Database insert error:', dbError)
+        } else {
+          console.log('Transaction stored in database:', data.transaction_request_id)
+        }
+      } catch (dbErr) {
+        console.error('Database error:', dbErr)
+      }
+
       return {
         statusCode: 200,
         headers,

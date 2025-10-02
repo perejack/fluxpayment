@@ -60,7 +60,7 @@ export default function TransactionStatus({
     
     setChecking(true)
     try {
-      const response = await fetch('/.netlify/functions/check-status', {
+      const response = await fetch('/.netlify/functions/check-status-db', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
