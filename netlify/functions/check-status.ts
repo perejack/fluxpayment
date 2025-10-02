@@ -78,7 +78,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Try different API endpoints
     const endpoints = [
-      process.env.PFLUX_STATUS_URL || 'https://api.pesaflux.co.ke/v1/transactionstatus',
+      'https://api.pesaflux.co.ke/v1/transactionstatus',
       'https://api.pesaflux.co.ke/api/v1/payments/transaction-status',
       'https://api.pesaflux.co.ke/api/payments/transaction-status',
       'https://pesaflux.co.ke/v1/transactionstatus'

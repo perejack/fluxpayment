@@ -3,7 +3,7 @@ import { Loader2, CreditCard, Phone, DollarSign } from 'lucide-react'
 import type { Transaction } from '../App'
 
 interface PaymentFormProps {
-  onPaymentInitiated: (transaction: Transaction, email: string) => void
+  onPaymentInitiated: (transaction: Transaction) => void
 }
 
 export default function PaymentForm({ onPaymentInitiated }: PaymentFormProps) {
@@ -102,7 +102,7 @@ export default function PaymentForm({ onPaymentInitiated }: PaymentFormProps) {
           message: 'Check your phone for M-Pesa prompt',
           amount: parseFloat(amount),
           phone: formattedPhone,
-        }, email)
+        })
       } else {
         throw new Error(data.massage || data.message || 'Payment initiation failed')
       }

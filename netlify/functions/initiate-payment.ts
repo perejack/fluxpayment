@@ -93,7 +93,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Try different API endpoints
     const endpoints = [
-      process.env.PFLUX_STK_URL || 'https://api.pesaflux.co.ke/v1/initiatestk',
+      'https://api.pesaflux.co.ke/v1/initiatestk',
       'https://api.pesaflux.co.ke/api/v1/payments/stk-push',
       'https://api.pesaflux.co.ke/api/payments/stk-push',
       'https://pesaflux.co.ke/v1/initiatestk'

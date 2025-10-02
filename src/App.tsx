@@ -15,16 +15,13 @@ export interface Transaction {
 
 function App() {
   const [transaction, setTransaction] = useState<Transaction | null>(null)
-  const [email, setEmail] = useState<string>('')
 
-  const handlePaymentInitiated = (transactionData: Transaction, userEmail: string) => {
+  const handlePaymentInitiated = (transactionData: Transaction) => {
     setTransaction(transactionData)
-    setEmail(userEmail)
   }
 
   const handleReset = () => {
     setTransaction(null)
-    setEmail('')
   }
 
   return (
@@ -54,7 +51,6 @@ function App() {
               transaction={transaction} 
               onReset={handleReset}
               onStatusUpdate={setTransaction}
-              email={email}
             />
           )}
         </div>
