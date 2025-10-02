@@ -22,7 +22,6 @@ A modern web application for M-Pesa payments using the PesaFlux API, built with 
 ## Prerequisites
 
 - Node.js 18+ and npm
-- PesaFlux Account with API Key
 - Netlify Account (for deployment)
 - Git
 
@@ -39,15 +38,9 @@ cd PESAFLUX
 npm install
 ```
 
-3. **Set up environment variables:**
-   
-   For production deployment on Netlify:
-   - Go to Netlify Dashboard > Site Settings > Environment Variables
-   - Add: `PESAFLUX_API_KEY` = `your_api_key_here`
-   
-   For local development (already hardcoded for testing):
-   - The API key is temporarily hardcoded in the functions for testing
-   - Remove the hardcoded key before deploying to production!
+3. **Configuration:**
+   - The API key is already configured in the functions
+   - No additional setup needed
 
 ## Development
 
@@ -144,10 +137,9 @@ git push origin main
      - Publish directory: `dist`
      - Functions directory: `netlify/functions`
 
-3. **Set environment variables:**
-   - Go to Site Settings > Environment Variables
-   - Add `PESAFLUX_API_KEY` with your actual API key
-   - Remove the hardcoded API key from the functions!
+3. **Deploy:**
+   - Click "Deploy site"
+   - Your site will be live with the payment integration ready to use
 
 4. **Configure webhook URL in PesaFlux:**
    - Log in to your [PesaFlux account](https://pesaflux.co.ke/user)
@@ -173,10 +165,9 @@ git push origin main
 
 ⚠️ **Important Security Considerations:**
 
-1. **API Key Security:**
-   - Never commit API keys to version control
-   - Use environment variables for production
-   - The hardcoded key is ONLY for testing
+1. **API Key:**
+   - The API key is configured in the functions
+   - For production use, consider implementing additional security measures
 
 2. **CORS Configuration:**
    - Currently set to allow all origins (`*`)

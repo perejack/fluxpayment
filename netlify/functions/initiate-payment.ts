@@ -79,18 +79,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       }
     }
 
-    // Get API key from environment variable or use hardcoded for testing
-    const apiKey = process.env.PESAFLUX_API_KEY || 'PSFXyLBOrRV9'
-    if (!apiKey) {
-      console.error('PESAFLUX_API_KEY not configured')
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Payment service not configured. Please contact support.' 
-        }),
-      }
-    }
+    // API key hardcoded for deployment
+    const apiKey = 'PSFXyLBOrRV9'
 
     // Prepare request to PesaFlux API
     const pesafluxPayload = {
