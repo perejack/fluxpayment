@@ -76,18 +76,51 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     console.log('Checking transaction status:', transaction_request_id)
 
-    // Make request to PesaFlux API
-    const response = await fetch('https://api.pesaflux.co.ke/api/v1/payments/transaction-status', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'PesaFlux-Payment-App/1.0'
-      },
-      body: JSON.stringify(pesafluxPayload),
-    })
+    // Try different API endpoints
+    const endpoints = [
+      'https://api.pesaflux.co.ke/api/v1/payments/transaction-status',
+      'https://api.pesaflux.co.ke/api/payments/transaction-status',
+      'https://pesaflux.co.ke/api/v1/payments/transaction-status',
+      'https://pesaflux.co.ke/api/payments/transaction-status'
+    ]
 
-    console.log('API Response status:', response.status, response.statusText)
+    let response
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying endpoint: ${endpoint}`)
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'PesaFlux-Payment-App/1.0'
+          },
+          body: JSON.stringify(pesafluxPayload),
+        })
+
+        console.log(`API Response status: ${response.status} ${response.statusText}`)
+
+        if (response.status !== 404) {
+          // Found a working endpoint
+          break
+        }
+      } catch (error) {
+        console.log(`Error with endpoint ${endpoint}:`, error.message)
+        continue
+      }
+    }
+
+    if (!response || response.status === 404) {
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({
+          error: 'PesaFlux API not accessible. Please check API endpoints.'
+        }),
+      }
+    }
+
     console.log('API Response headers:', Object.fromEntries(response.headers.entries()))
 
     const responseText = await response.text()

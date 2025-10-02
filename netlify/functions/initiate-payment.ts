@@ -91,20 +91,51 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       reference: reference,
     }
 
-    console.log('Initiating payment:', { msisdn, amount, reference })
+    // Try different API endpoints
+    const endpoints = [
+      'https://api.pesaflux.co.ke/api/v1/payments/stk-push',
+      'https://api.pesaflux.co.ke/api/payments/stk-push',
+      'https://pesaflux.co.ke/api/v1/payments/stk-push',
+      'https://pesaflux.co.ke/api/payments/stk-push'
+    ]
 
-    // Make request to PesaFlux API
-    const response = await fetch('https://api.pesaflux.co.ke/api/v1/payments/stk-push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'PesaFlux-Payment-App/1.0'
-      },
-      body: JSON.stringify(pesafluxPayload),
-    })
+    let response
 
-    console.log('API Response status:', response.status, response.statusText)
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying endpoint: ${endpoint}`)
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'PesaFlux-Payment-App/1.0'
+          },
+          body: JSON.stringify(pesafluxPayload),
+        })
+
+        console.log(`API Response status: ${response.status} ${response.statusText}`)
+
+        if (response.status !== 404) {
+          // Found a working endpoint
+          break
+        }
+      } catch (error) {
+        console.log(`Error with endpoint ${endpoint}:`, error.message)
+        continue
+      }
+    }
+
+    if (!response || response.status === 404) {
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({
+          error: 'PesaFlux API not accessible. Please check API endpoints.'
+        }),
+      }
+    }
+
     console.log('API Response headers:', Object.fromEntries(response.headers.entries()))
 
     const responseText = await response.text()
