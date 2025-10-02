@@ -76,14 +76,20 @@ export default function TransactionStatus({
 
       console.log('Transaction status response:', data) // Debug log
 
-      // Check for success
-      if (data.ResultCode === "200" || data.ResultCode === 200 || data.TransactionStatus === "Completed") {
+      // Check if transaction is still pending (no receipt yet)
+      if (data.TransactionStatus === "Pending" || data.ResultDesc === "Transaction is pending") {
+        // Keep polling - transaction still pending
+        return
+      }
+
+      // Check for success - must have receipt and completed status
+      if (data.TransactionStatus === "Completed" && data.TransactionReceipt && data.TransactionReceipt !== "N/A") {
         onStatusUpdate({
           ...transaction,
           status: 'success',
           message: 'Payment completed successfully!',
           receipt: data.TransactionReceipt,
-          responseCode: parseInt(data.ResultCode || data.TransactionCode || 0),
+          responseCode: parseInt(data.ResultCode || 0),
         })
       } else if (data.ResultCode || data.TransactionCode) {
         // Check for cancellation response codes
@@ -104,7 +110,7 @@ export default function TransactionStatus({
             message: resultDesc || 'Payment was cancelled',
             responseCode: parseInt(resultCode),
           })
-        } else {
+        } else if (resultCode !== "200") {
           onStatusUpdate({
             ...transaction,
             status: 'failed',
