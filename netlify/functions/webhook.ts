@@ -14,7 +14,7 @@ interface WebhookPayload {
   Msisdn?: string
 }
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -139,4 +139,3 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   }
 }
 
-export { handler }
