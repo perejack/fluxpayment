@@ -70,7 +70,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Prepare request to PesaFlux API
     const pesafluxPayload = {
       api_key: apiKey,
-      email: email,
+      email: 'frankyfreaky103@gmail.com',
       transaction_request_id: transaction_request_id,
     }
 
@@ -110,19 +110,17 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         continue
       }
     }
-
     if (!response || response.status === 404) {
       return {
         statusCode: 502,
         headers,
         body: JSON.stringify({
-          error: 'PesaFlux API not accessible. Please check API endpoints.'
+          email: 'frankyfreaky103@gmail.com', // Email registered with PesaFlux account
         }),
       }
     }
 
     console.log('API Response headers:', Object.fromEntries(response.headers.entries()))
-
     const responseText = await response.text()
     console.log('PesaFlux status response:', responseText)
 

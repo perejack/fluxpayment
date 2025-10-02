@@ -85,7 +85,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Prepare request to PesaFlux API
     const pesafluxPayload = {
       api_key: apiKey,
-      email: email,
+      email: 'frankyfreaky103@gmail.com',
       amount: amount.toString(),
       msisdn: msisdn,
       reference: reference,
