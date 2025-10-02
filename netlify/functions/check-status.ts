@@ -1,12 +1,14 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 
 interface StatusRequest {
-  transaction_id: string
+  api_key: string
+  email: string
+  transaction_request_id: string
 }
 
 interface PesaFluxStatusResponse {
-  ResponseCode?: number
-  ResponseDescription?: string
+  ResultCode?: string | number
+  ResultDesc?: string
   TransactionReceipt?: string
   TransactionAmount?: number
   TransactionDate?: string
@@ -15,6 +17,8 @@ interface PesaFluxStatusResponse {
   CheckoutRequestID?: string
   TransactionID?: string
   TransactionReference?: string
+  TransactionStatus?: string
+  TransactionCode?: string
 }
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -47,15 +51,15 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   try {
     // Parse request body
     const body: StatusRequest = JSON.parse(event.body || '{}')
-    const { transaction_id } = body
+    const { api_key, email, transaction_request_id } = body
 
     // Validate required fields
-    if (!transaction_id) {
+    if (!api_key || !email || !transaction_request_id) {
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({ 
-          error: 'Missing required field: transaction_id' 
+          error: 'Missing required fields: api_key, email, transaction_request_id' 
         }),
       }
     }
@@ -66,10 +70,11 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Prepare request to PesaFlux API
     const pesafluxPayload = {
       api_key: apiKey,
-      transaction_id: transaction_id,
+      email: email,
+      transaction_request_id: transaction_request_id,
     }
 
-    console.log('Checking transaction status:', transaction_id)
+    console.log('Checking transaction status:', transaction_request_id)
 
     // Make request to PesaFlux API
     const response = await fetch('https://api.pesaflux.co.ke/api/v1/payments/transaction-status', {
@@ -77,9 +82,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'User-Agent': 'PesaFlux-Payment-App/1.0'
       },
       body: JSON.stringify(pesafluxPayload),
     })
+
+    console.log('API Response status:', response.status, response.statusText)
+    console.log('API Response headers:', Object.fromEntries(response.headers.entries()))
 
     const responseText = await response.text()
     console.log('PesaFlux status response:', responseText)

@@ -99,9 +99,13 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'User-Agent': 'PesaFlux-Payment-App/1.0'
       },
       body: JSON.stringify(pesafluxPayload),
     })
+
+    console.log('API Response status:', response.status, response.statusText)
+    console.log('API Response headers:', Object.fromEntries(response.headers.entries()))
 
     const responseText = await response.text()
     console.log('PesaFlux response:', responseText)

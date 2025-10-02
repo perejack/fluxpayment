@@ -66,26 +66,28 @@ export default function TransactionStatus({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          transaction_id: transaction.transactionId,
+          api_key: 'PSFXyLBOrRV9',
+          email: 'test@example.com', // This should be the email from the original payment
+          transaction_request_id: transaction.transactionId,
         }),
       })
 
       const data = await response.json()
 
-      if (data.ResponseCode === 0) {
+      if (data.ResultCode === "200" || data.ResultCode === 200) {
         onStatusUpdate({
           ...transaction,
           status: 'success',
           message: 'Payment completed successfully!',
           receipt: data.TransactionReceipt,
-          responseCode: data.ResponseCode,
+          responseCode: parseInt(data.ResultCode),
         })
-      } else if (data.ResponseCode && data.ResponseCode !== 0) {
+      } else if (data.ResultCode && data.ResultCode !== "200") {
         onStatusUpdate({
           ...transaction,
           status: 'failed',
-          message: data.ResponseDescription || 'Payment failed',
-          responseCode: data.ResponseCode,
+          message: data.ResultDesc || 'Payment failed',
+          responseCode: parseInt(data.ResultCode),
         })
       }
     } catch (error) {
