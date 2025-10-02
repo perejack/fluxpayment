@@ -1,4 +1,5 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
+import { supabase } from './supabase'
 
 interface StatusRequest {
   api_key: string
@@ -52,88 +53,45 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     // Parse request body
     const body: StatusRequest = JSON.parse(event.body || '{}')
     const { api_key, email, transaction_request_id } = body
-
     // Validate required fields
     if (!api_key || !email || !transaction_request_id) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ 
-          error: 'Missing required fields: api_key, email, transaction_request_id' 
+        body: JSON.stringify({
+          error: 'Missing required fields: api_key, email, transaction_request_id'
         }),
       }
     }
 
-    // API key hardcoded for deployment
-    const apiKey = 'PSFXyLBOrRV9'
+    console.log('Checking transaction status in database:', transaction_request_id)
 
-    // Prepare request to PesaFlux API
-    const pesafluxPayload = {
-      api_key: apiKey,
-      email: 'frankyfreaky103@gmail.com',
-      transaction_request_id: transaction_request_id,
-    }
+    // Query database for transaction status
+    const { data: transaction, error: dbError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('transaction_request_id', transaction_request_id)
+      .single()
 
-    console.log('Checking transaction status:', transaction_request_id)
-
-    // Try different API endpoints
-    const endpoints = [
-      'https://api.pesaflux.co.ke/v1/transactionstatus',
-      'https://api.pesaflux.co.ke/api/v1/payments/transaction-status',
-      'https://api.pesaflux.co.ke/api/payments/transaction-status',
-      'https://pesaflux.co.ke/v1/transactionstatus'
-    ]
-
-    let response
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`Trying endpoint: ${endpoint}`)
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'User-Agent': 'PesaFlux-Payment-App/1.0'
-          },
-          body: JSON.stringify(pesafluxPayload),
-        })
-
-        console.log(`API Response status: ${response.status} ${response.statusText}`)
-
-        if (response.status !== 404) {
-          // Found a working endpoint
-          break
-        }
-      } catch (error) {
-        console.log(`Error with endpoint ${endpoint}:`, error.message)
-        continue
-      }
-    }
-    if (!response || response.status === 404) {
+    if (dbError) {
+      console.error('Database query error:', dbError)
+      // If transaction not found, it might still be processing
+      // Return pending status to keep polling
       return {
-        statusCode: 502,
+        statusCode: 200,
         headers,
         body: JSON.stringify({
-          email: 'frankyfreaky103@gmail.com', // Email registered with PesaFlux account
-        }),
-      }
-    }
-
-    console.log('API Response headers:', Object.fromEntries(response.headers.entries()))
-    const responseText = await response.text()
-    console.log('PesaFlux status response:', responseText)
-
-    let data: PesaFluxStatusResponse
-    try {
-      data = JSON.parse(responseText)
-    } catch (e) {
-      console.error('Failed to parse PesaFlux response:', responseText)
-      return {
-        statusCode: 502,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Invalid response from payment service' 
+          ResultCode: '200',
+          ResultDesc: 'Transaction is pending',
+          TransactionStatus: 'Pending',
+          TransactionReceipt: 'N/A',
+          TransactionAmount: null,
+          TransactionDate: null,
+          TransactionReference: null,
+          Msisdn: null,
+          MerchantRequestID: null,
+          CheckoutRequestID: null,
+          TransactionID: null,
         }),
       }
     }
@@ -142,19 +100,29 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ResultCode: transaction.status === 'success' ? '200' : (transaction.status === 'cancelled' ? '1032' : '1'),
+        ResultDesc: transaction.result_description || transaction.status,
+        TransactionStatus: transaction.status === 'success' ? 'Completed' : transaction.status,
+        TransactionReceipt: transaction.receipt_number || 'N/A',
+        TransactionAmount: transaction.amount,
+        TransactionDate: transaction.transaction_date,
+        TransactionReference: transaction.reference,
+        Msisdn: transaction.phone,
+        MerchantRequestID: transaction.merchant_request_id,
+        CheckoutRequestID: transaction.checkout_request_id,
+        TransactionID: transaction.transaction_id,
+      }),
     }
   } catch (error) {
     console.error('Status check error:', error)
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     }
   }
 }
-
-export { handler }
