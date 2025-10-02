@@ -22,7 +22,7 @@ interface PesaFluxStatusResponse {
   TransactionCode?: string
 }
 
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -126,4 +126,3 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     }
   }
 }
-
