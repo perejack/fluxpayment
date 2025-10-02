@@ -91,24 +91,78 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
 
     // Update transaction in database
     try {
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update({
-          status: status,
-          result_code: ResponseCode.toString(),
-          result_description: statusMessage,
-          receipt_number: TransactionReceipt,
-          merchant_request_id: MerchantRequestID,
-          checkout_request_id: CheckoutRequestID,
-          transaction_date: TransactionDate,
-          transaction_id: TransactionID,
-          updated_at: new Date().toISOString(),
-        })
+      // Try to find the transaction by multiple identifiers
+      let query = supabase.from('transactions')
+      
+      // First try merchant_request_id
+      let { data: transaction, error: findError } = await query
+        .select('*')
         .eq('merchant_request_id', MerchantRequestID)
+        .maybeSingle()
 
-      if (updateError) {
-        console.error('Database update error:', updateError)
-        console.log('Transaction updated in database:', TransactionID)
+      // If not found, try checkout_request_id
+      if (!transaction && CheckoutRequestID) {
+        const result = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('checkout_request_id', CheckoutRequestID)
+          .maybeSingle()
+        transaction = result.data
+      }
+
+      // If not found, try transaction_request_id (fallback)
+      if (!transaction && TransactionReference) {
+        const result = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('reference', TransactionReference)
+          .maybeSingle()
+        transaction = result.data
+      }
+
+      // If still not found, update the most recent pending transaction for this phone
+      if (!transaction && Msisdn) {
+        const result = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('phone', Msisdn)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        transaction = result.data
+      }
+
+      if (transaction) {
+        console.log('Found transaction to update:', transaction.id)
+        
+        const { error: updateError } = await supabase
+          .from('transactions')
+          .update({
+            status: status,
+            result_code: ResponseCode.toString(),
+            result_description: statusMessage,
+            receipt_number: TransactionReceipt,
+            merchant_request_id: MerchantRequestID,
+            checkout_request_id: CheckoutRequestID,
+            transaction_date: TransactionDate,
+            transaction_id: TransactionID,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', transaction.id)
+
+        if (updateError) {
+          console.error('Database update error:', updateError)
+        } else {
+          console.log('Transaction updated successfully:', TransactionID, 'Status:', status)
+        }
+      } else {
+        console.error('Transaction not found for webhook. Payload:', {
+          MerchantRequestID,
+          CheckoutRequestID,
+          TransactionReference,
+          Msisdn
+        })
       }
     } catch (dbErr) {
       console.error('Database update error:', dbErr)
